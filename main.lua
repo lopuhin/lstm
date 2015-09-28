@@ -51,7 +51,7 @@ local params = {batch_size=20,
 
 -- Trains 1h and gives test 115 perplexity.
 local params = {batch_size=20,
-                seq_length=20,
+                seq_length=8,
                 layers=2,
                 decay=2,
                 rnn_size=200,
@@ -281,6 +281,7 @@ local function main()
             ', dw:norm() = ' .. g_f3(model.norm_dw) ..
             ', lr = ' ..  g_f3(params.lr) ..
             ', since beginning = ' .. since_beginning .. ' mins.')
+      torch.save('model.tch', model)
     end
     if step % epoch_size == 0 then
       run_valid()
