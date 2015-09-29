@@ -237,7 +237,6 @@ local function run_test()
 end
 
 local function main()
-  torch.setdefaulttensortype('torch.FloatTensor')
   if use_gpu then
     g_init_gpu(arg)
   end

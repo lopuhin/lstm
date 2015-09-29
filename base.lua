@@ -6,6 +6,10 @@
 --  LICENSE file in the root directory of this source tree.
 --
 
+
+torch.setdefaulttensortype('torch.FloatTensor')
+
+
 function g_disable_dropout(node)
   if type(node) == "table" and node.__typename == nil then
     for i = 1, #node do
