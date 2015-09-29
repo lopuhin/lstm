@@ -5,8 +5,8 @@
 ----  This source code is licensed under the Apache 2 license found in the
 ----  LICENSE file in the root directory of this source tree.
 ----
--- global variable to dictate whether CPU or GPU should be used, accessed via g_use_cpu()
-use_cpu=false
+
+use_gpu = true
 local ok,cunn = pcall(require, 'fbcunn')
 if not ok then
     ok,cunn = pcall(require,'cunn')
@@ -20,7 +20,7 @@ if not ok then
           print("Could not find nn. Cannot continue, exiting")
           os.exit(1)
         else
-          use_cpu=true
+          use_gpu = false
           LookupTable = nn.LookupTable
         end
     end
@@ -64,10 +64,10 @@ local params = {batch_size=20,
                 max_grad_norm=5}
 
 local function transfer_data(x)
-  if (g_use_cpu()) then
-    return x
-  else
+  if use_gpu then
     return x:cuda()
+  else
+    return x
   end
 end
 
@@ -194,8 +194,7 @@ local function bp(state)
     local tmp = model.rnns[i]:backward({x, y, s},
                                        {derr, model.ds})[3]
     g_replace_table(model.ds, tmp)
-    if (g_use_cpu()) then
-    else
+    if use_gpu then
       cutorch.synchronize()
     end
   end
@@ -239,9 +238,7 @@ end
 
 local function main()
   torch.setdefaulttensortype('torch.FloatTensor')
-  if (g_use_cpu()) then
-    -- do nothing, we're running on the CPU
-  else
+  if use_gpu then
     g_init_gpu(arg)
   end
   state_train = {data=transfer_data(ptb.traindataset(params.batch_size))}
@@ -292,8 +289,7 @@ local function main()
       end
     end
     if step % 33 == 0 then
-      if (g_use_cpu()) then
-      else
+      if use_gpu then
         cutorch.synchronize()
       end
       collectgarbage()
