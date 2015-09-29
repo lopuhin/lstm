@@ -3,7 +3,7 @@
 --  All rights reserved.
 --
 --  This source code is licensed under the Apache 2 license found in the
---  LICENSE file in the root directory of this source tree. 
+--  LICENSE file in the root directory of this source tree.
 --
 
 function g_disable_dropout(node)
@@ -79,7 +79,7 @@ function g_f3(f)
 end
 
 function g_use_cpu()
-  -- This simple check / boolean could eventually be replaced with 
+  -- This simple check / boolean could eventually be replaced with
   -- a more elegant runtime sensing of GPU vs CPU
   -- but at present this all seems to be predicated on use of require 'lib_X'
   -- if true, training on CPU for 1h gives test 129 perplexity (vs 115 for GPU).

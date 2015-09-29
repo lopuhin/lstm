@@ -3,7 +3,7 @@
 ----  All rights reserved.
 ----
 ----  This source code is licensed under the Apache 2 license found in the
-----  LICENSE file in the root directory of this source tree. 
+----  LICENSE file in the root directory of this source tree.
 ----
 -- global variable to dictate whether CPU or GPU should be used, accessed via g_use_cpu()
 use_cpu=false
@@ -11,7 +11,7 @@ local ok,cunn = pcall(require, 'fbcunn')
 if not ok then
     ok,cunn = pcall(require,'cunn')
     if ok then
-        print("warning: fbcunn not found. Falling back to cunn") 
+        print("warning: fbcunn not found. Falling back to cunn")
         LookupTable = nn.LookupTable
     else
         print("Could not find cunn or fbcunn. Falling back to CPU")
@@ -66,7 +66,7 @@ local params = {batch_size=20,
 local function transfer_data(x)
   if (g_use_cpu()) then
     return x
-  else 
+  else
     return x:cuda()
   end
 end
@@ -80,12 +80,12 @@ local function lstm(x, prev_c, prev_h)
   local i2h = nn.Linear(params.rnn_size, 4*params.rnn_size)(x)
   local h2h = nn.Linear(params.rnn_size, 4*params.rnn_size)(prev_h)
   local gates = nn.CAddTable()({i2h, h2h})
-  
+
   -- Reshape to (batch_size, n_gates, hid_size)
   -- Then slize the n_gates dimension, i.e dimension 2
   local reshaped_gates =  nn.Reshape(4,params.rnn_size)(gates)
   local sliced_gates = nn.SplitTable(2)(reshaped_gates)
-  
+
   -- Use select gate to fetch each gate and apply nonlinearity
   local in_gate          = nn.Sigmoid()(nn.SelectTable(1)(sliced_gates))
   local in_transform     = nn.Tanh()(nn.SelectTable(2)(sliced_gates))
