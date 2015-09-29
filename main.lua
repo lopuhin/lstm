@@ -238,6 +238,7 @@ local function run_test()
 end
 
 local function main()
+  torch.setdefaulttensortype('torch.FloatTensor')
   if (g_use_cpu()) then
     -- do nothing, we're running on the CPU
   else
