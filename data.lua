@@ -65,4 +65,5 @@ end
 
 return {traindataset=traindataset,
         testdataset=testdataset,
-        validdataset=validdataset}
+        validdataset=validdataset,
+        vocab_map=vocab_map}

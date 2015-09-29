@@ -72,7 +72,7 @@ local function transfer_data(x)
 end
 
 local state_train, state_valid, state_test
-local model = {}
+local model = {params=params}
 local paramx, paramdx
 
 local function lstm(x, prev_c, prev_h)
@@ -247,6 +247,7 @@ local function main()
   state_train = {data=transfer_data(ptb.traindataset(params.batch_size))}
   state_valid =  {data=transfer_data(ptb.validdataset(params.batch_size))}
   state_test =  {data=transfer_data(ptb.testdataset(params.batch_size))}
+  model.vocab_map = ptb.vocab_map
   print("Network parameters:")
   print(params)
   local states = {state_train, state_valid, state_test}
