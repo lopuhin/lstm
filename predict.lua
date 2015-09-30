@@ -36,7 +36,8 @@ local function idx_to_word(model, idx)
   return model.vocab_map_inversed[idx]
 end
 
-local function predict(model, text, n_best)
+local function get_output_state(model, text)
+  -- Return output state (prediction before linear expansion layer)
   local x = sentence_to_vec(model, text)
   -- replicate to process on nn
   local input = x:resize(x:size(1), 1):expand(x:size(1), model.params.batch_size)
@@ -51,8 +52,14 @@ local function predict(model, text, n_best)
     _, model.s[1] = unpack(model.rnns[1]:forward({x, y, model.s[0]}))
     g_replace_table(model.s[0], model.s[1])
   end
-  local out_state = model.s[1][4]
+  return model.s[1][4]
+end
+
+local function predict(model, text, n_best)
+  -- Return :n_best: predictions from the :model: for the next word in :text:
+  local out_state = get_output_state(model, text)
   local out_matrix = model.rnns[1]:parameters()[10] -- TODO - better way to address?
+  -- FIXME - what is parameters()[11]???
   local pred_vec = out_state * out_matrix:transpose(1, 2)
   pred_vec = pred_vec[{1, {}}]
   local idx_prediction = {}
@@ -68,4 +75,7 @@ local function predict(model, text, n_best)
   return word_prediction
 end
 
-return {predict=predict}
+return {
+  predict=predict,
+  get_output_state=get_output_state
+}
