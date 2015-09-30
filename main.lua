@@ -31,7 +31,7 @@ else
 end
 require('nngraph')
 require('base')
-local ptb = require('data')
+local data = require('data')
 
 -- Train 1 day and gives 82 perplexity.
 --[[
@@ -71,7 +71,7 @@ local function transfer_data(x)
   end
 end
 
-local state_train, state_valid, state_test
+local state_valid, state_test
 local model = {params=params}
 local paramx, paramdx
 
@@ -240,14 +240,13 @@ local function main()
   if use_gpu then
     g_init_gpu(arg)
   end
-  state_train = {data=transfer_data(ptb.traindataset(params.batch_size))}
-  state_valid =  {data=transfer_data(ptb.validdataset(params.batch_size))}
-  state_test =  {data=transfer_data(ptb.testdataset(params.batch_size))}
-  model.vocab_map = ptb.vocab_map
+  local train_data = data.traindataset()
+  state_valid =  {data=transfer_data(data.validdataset(params.batch_size))}
+  state_test =  {data=transfer_data(data.testdataset(params.batch_size))}
+  model.vocab_map = data.vocab_map
   print("Network parameters:")
   print(params)
-  local states = {state_train, state_valid, state_test}
-  for _, state in pairs(states) do
+  for _, state in pairs({state_valid, state_test}) do
     reset_state(state)
   end
   setup()
@@ -258,40 +257,54 @@ local function main()
   local start_time = torch.tic()
   print("Starting training.")
   local words_per_step = params.seq_length * params.batch_size
-  local epoch_size = torch.floor(state_train.data:size(1) / params.seq_length)
+  local train_size = train_data:size(1)
+  local epoch_size = torch.floor(train_size / params.seq_length^2)
+  local train_batch_size = 1000000
+  local train_steps = math.floor(train_size / train_batch_size) + 1
   local perps
   while epoch < params.max_max_epoch do
-    local perp = fp(state_train)
-    if perps == nil then
-      perps = torch.zeros(epoch_size):add(perp)
-    end
-    perps[step % epoch_size + 1] = perp
-    step = step + 1
-    bp(state_train)
-    total_cases = total_cases + params.seq_length * params.batch_size
-    epoch = step / epoch_size
-    if step % torch.round(epoch_size / 10) == 10 then
-      local wps = torch.floor(total_cases / torch.toc(start_time))
-      local since_beginning = g_d(torch.toc(beginning_time) / 60)
-      print('epoch = ' .. g_f3(epoch) ..
-            ', train perp. = ' .. g_f3(torch.exp(perps:mean())) ..
-            ', wps = ' .. wps ..
-            ', dw:norm() = ' .. g_f3(model.norm_dw) ..
-            ', lr = ' ..  g_f3(params.lr) ..
-            ', since beginning = ' .. since_beginning .. ' mins.')
-      torch.save('model.tch', model)
-    end
-    if step % epoch_size == 0 then
-      run_valid()
-      if epoch > params.max_epoch then
-          params.lr = params.lr / params.decay
+    for train_step = 1, train_steps do
+      print("train_step " .. train_step)
+      local train_data_slice = train_data:sub(
+          (train_step - 1) * train_batch_size + 1,
+          math.min(train_size, train_step * train_batch_size))
+      local state_train = {data=transfer_data(
+          data.replicate(train_data_slice, params.batch_size))}
+      reset_state(state_train)
+      while state_train.pos + params.seq_length < state_train.data:size(1) do
+        local perp = fp(state_train)
+        if perps == nil then
+          perps = torch.zeros(epoch_size):add(perp)
+        end
+        perps[step % epoch_size + 1] = perp
+        step = step + 1
+        bp(state_train)
+        total_cases = total_cases + params.seq_length * params.batch_size
+        epoch = step / epoch_size
+        if step % torch.round(epoch_size / 100) == 50 then
+          local wps = torch.floor(total_cases / torch.toc(start_time))
+          local since_beginning = g_d(torch.toc(beginning_time) / 60)
+          print('epoch = ' .. g_f3(epoch) ..
+                ', train perp. = ' .. g_f3(torch.exp(perps:mean())) ..
+                ', wps = ' .. wps ..
+                ', dw:norm() = ' .. g_f3(model.norm_dw) ..
+                ', lr = ' ..  g_f3(params.lr) ..
+                ', since beginning = ' .. since_beginning .. ' mins.')
+          torch.save('model.tch', model)
+        end
+        if step % epoch_size == 0 then
+          run_valid()
+          if epoch > params.max_epoch then
+              params.lr = params.lr / params.decay
+          end
+        end
+        if step % 33 == 0 then
+          if use_gpu then
+            cutorch.synchronize()
+          end
+          collectgarbage()
+        end
       end
-    end
-    if step % 33 == 0 then
-      if use_gpu then
-        cutorch.synchronize()
-      end
-      collectgarbage()
     end
   end
   run_test()

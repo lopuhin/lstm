@@ -9,7 +9,7 @@
 local stringx = require('pl.stringx')
 local file = require('pl.file')
 
-local ptb_path = "./ptb/"
+local data_path = "./ptb/"
 
 local vocab_idx = 0
 local vocab_map = {}
@@ -43,22 +43,23 @@ local function load_data(fname)
    return x
 end
 
-local function traindataset(batch_size)
-   local x = load_data(ptb_path .. "train.txt")
-   x = replicate(x, batch_size)
+local function traindataset()
+   local x = load_data(data_path .. "train.txt")
+   -- Do not replicate here to save memory,
+   -- this will be replicated in batches during training.
    return x
 end
 
 -- Intentionally we repeat dimensions without offseting.
 -- Pass over this batch corresponds to the fully sequential processing.
 local function testdataset(batch_size)
-   local x = load_data(ptb_path .. "test.txt")
+   local x = load_data(data_path .. "test.txt")
    x = x:resize(x:size(1), 1):expand(x:size(1), batch_size)
    return x
 end
 
 local function validdataset(batch_size)
-   local x = load_data(ptb_path .. "valid.txt")
+   local x = load_data(data_path .. "valid.txt")
    x = replicate(x, batch_size)
    return x
 end
@@ -66,4 +67,5 @@ end
 return {traindataset=traindataset,
         testdataset=testdataset,
         validdataset=validdataset,
+        replicate=replicate,
         vocab_map=vocab_map}
